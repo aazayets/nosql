@@ -38,8 +38,13 @@ namespace Tweets.Repositories
                 Query<MessageDocument>.EQ(doc => doc.Id, messageId),
                 Query.Not(Query<MessageDocument>.ElemMatch(doc => doc.Likes,
                     builder => builder.EQ(doc => doc.UserName, user.Name))));
-            var update = Update<MessageDocument>.Push(doc => doc.Likes, likeDocument);
-            messagesCollection.Update(query, update);
+            foreach (var document in messagesCollection.Find(query))
+            {
+                var update = document.Likes == null
+                    ? Update<MessageDocument>.Set(doc => doc.Likes, new List<LikeDocument> {likeDocument})
+                    : Update<MessageDocument>.AddToSet(doc => doc.Likes, likeDocument);
+                messagesCollection.Update(query, update);
+            }
         }
 
         public void Dislike(Guid messageId, User user)
